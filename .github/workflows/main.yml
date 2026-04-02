@@ -1,0 +1,47 @@
+name: SBOM and SCA Scan
+
+on:
+  push:
+    branches: [ "main" ]
+  workflow_dispatch:
+
+jobs:
+  security:
+    runs-on: ubuntu-latest
+
+    steps:
+      # 1. Checkout code
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      # 2. Generate SBOM (CycloneDX)
+      - name: Generate SBOM
+        uses: CycloneDX/gh-node-module-generatebom@v1
+        with:
+          output: sbom.json
+
+      # 3. Run SCA scan (Trivy - JSON)
+      - name: Run Trivy SCA (JSON)
+        uses: aquasecurity/trivy-action@master
+        with:
+          scan-type: 'fs'
+          format: 'json'
+          output: 'sca-report.json'
+
+      # 4. Run SCA scan (SARIF - for bank/audit)
+      - name: Run Trivy SCA (SARIF)
+        uses: aquasecurity/trivy-action@master
+        with:
+          scan-type: 'fs'
+          format: 'sarif'
+          output: 'sca-report.sarif'
+
+      # 5. Upload reports (IMPORTANT)
+      - name: Upload reports
+        uses: actions/upload-artifact@v4
+        with:
+          name: security-reports
+          path: |
+            sbom.json
+            sca-report.json
+            sca-report.sarif
